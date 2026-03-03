@@ -1,2 +1,2 @@
 /target
-src/environmental.yaml
+*.yaml
