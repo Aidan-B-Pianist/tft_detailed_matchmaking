@@ -1,11 +1,13 @@
 use std::io::{self, Write};
-use anyhow;
-use serde;
+use serde::Deserialize;
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 
 struct SummonerResponse {
     puuid : String,
     game_name : String,
-    tag_line1 : String
+    tag_line : String
 }
 
 
@@ -20,22 +22,49 @@ async fn main() -> anyhow::Result<()> {
     let summoner = __summoner_name__.trim();
     println!("Getting a detailed report for summoner: {}", summoner);
 
-    tft_api_request(summoner).await?;
+    tft_summoner_request(summoner).await?;
+    // tft_matchid_request(res).await?;
 
     Ok(())
 }
 
 
-async fn tft_api_request(summoner: &str) -> anyhow::Result<()> {
+async fn tft_summoner_request(summoner: &str) -> anyhow::Result<()> {
     // Placeholder: this is where your pipeline goes:
-    
     // 1) riot-id -> account endpoint (puuid)
-    ///riot/account/v1/accounts/by-riot-id/{gameName}/{tagLine} get the api request format
+    // /riot/account/v1/accounts/by-riot-id/{gameName}/{tagLine} get the api request format
+    let (game_name, tag_line) = summoner.split_once("#").ok_or_else(|| anyhow::anyhow!("Invalid format. Use SummonerName#Tag"))?;
+
+    let config = std::fs::read_to_string("environmental.yaml")?;
+
+    let url = format!(
+        "https://americas.api.riotgames.com/riot/account/v1/accounts/by-riot-id/{}/{}",
+        game_name, tag_line
+    );
+
+    let client = reqwest::Client::new();
+    let res = client
+        .get(&url)
+        .header("X-Riot-Token", config)
+        .send()
+        .await?
+        .error_for_status()?
+        .json::<SummonerResponse>()
+        .await?;
+
+    println!("PUUID: {}", res.puuid);
+    println!("Name: {}#{}", res.game_name, res.tag_line);
     // 2) puuid -> matchlist endpoint (match ids)
     // 3) match ids -> match details (concurrently)
     // 4) aggregate “top comps”, print report
 
     println!("(todo) Would query Riot API for: {}", summoner);
+    Ok(())
+}
+
+async fn tft_matchid_request(summoner: &str) -> anyhow::Result<()> {
+    
+
     Ok(())
 }
 
