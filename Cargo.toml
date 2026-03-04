@@ -6,5 +6,6 @@ edition = "2024"
 [dependencies]
 anyhow = "1.0.102"
 tokio = { version = "1.49", features = ["full"] }
-serde = { version = "1", features = ["derive"] }
+serde = { version = "1", features = ["derive", "rc"] }
 reqwest = { version = "0.12", features = ["json"] }
+serde_yaml = "0.9.34"

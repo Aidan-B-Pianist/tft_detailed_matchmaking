@@ -1,9 +1,13 @@
 use std::io::{self, Write};
+use anyhow::Context;
 use serde::Deserialize;
 
+#[derive(Deserialize)]
+struct Config {
+    api_key: String,
+}
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
-
 struct SummonerResponse {
     puuid : String,
     game_name : String,
@@ -28,14 +32,15 @@ async fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
-
 async fn tft_summoner_request(summoner: &str) -> anyhow::Result<()> {
     // Placeholder: this is where your pipeline goes:
     // 1) riot-id -> account endpoint (puuid)
     // /riot/account/v1/accounts/by-riot-id/{gameName}/{tagLine} get the api request format
     let (game_name, tag_line) = summoner.split_once("#").ok_or_else(|| anyhow::anyhow!("Invalid format. Use SummonerName#Tag"))?;
-
-    let config = std::fs::read_to_string("environmental.yaml")?;
+    
+    let config : Config = serde_yaml::from_str(
+        &std::fs::read_to_string("config/environmental.yaml").with_context(|| "YAML file failed")?
+    )?;
 
     let url = format!(
         "https://americas.api.riotgames.com/riot/account/v1/accounts/by-riot-id/{}/{}",
@@ -45,12 +50,13 @@ async fn tft_summoner_request(summoner: &str) -> anyhow::Result<()> {
     let client = reqwest::Client::new();
     let res = client
         .get(&url)
-        .header("X-Riot-Token", config)
+        .header("X-Riot-Token", config.api_key)
         .send()
         .await?
         .error_for_status()?
         .json::<SummonerResponse>()
         .await?;
+
 
     println!("PUUID: {}", res.puuid);
     println!("Name: {}#{}", res.game_name, res.tag_line);
